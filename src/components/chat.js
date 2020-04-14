@@ -14,30 +14,13 @@ const localId = id
 const initiatorId = getRemoteId()
 const signaling = new Signaling(id, initiatorId)
 signaling.init(id)
-const initialPeer = createPeer(initiatorId, !initiatorId)
 
 if (initiatorId) {
   // Kickoff signaling.
-  logger.log('Send request...')
+  logger.log('KICKOFF! Send request...')
   signaling.send({ type: 'request' })
-}
-
-function getLocalSignals(remoteId, callback) {
-  if (totalConnections === 1 && initialSignals.size) {
-    logger.log('getLocalSignals: Using initial signals')
-    callback(initialSignals)
-    return
-  }
-  const signals = localSignals[remoteId]
-  if (signals) {
-    callback(signals)
-    return
-  }
-
-  setTimeout(() => {
-    logger.log('getLocalSignals: Local signals not ready, retry...')
-    getLocalSignals(remoteId, callback)
-  }, 1000)
+} else {
+  logger.log('We are the FIRST PEER 🤘')
 }
 
 const messageActionsMap = {
@@ -47,17 +30,9 @@ const messageActionsMap = {
       logger.log('We are NOT the initiator peer, ignore request message.')
       return
     }
-
-    getLocalSignals(remoteId, (signals) => {
-      logger.log(`Sending local signals to ${remoteId}...`, signals)
-      signals.forEach((signal) => {
-        signaling.send({
-          id,
-          targetId: remoteId,
-          signal,
-        })
-      })
-    })
+    logger.log(
+      `Got request message from ${remoteId}. We will send signals to this peer when available.`
+    )
   },
   offer: ({ peer, signal, signaling }) => {
     logger.log('Got offer', { peer, signal, signaling })
@@ -73,17 +48,34 @@ const messageActionsMap = {
   },
 }
 
+// Local signals.
+// Remote signals are received thru signaling channel as messages.
 const signalActionMap = {
   answer: ({ id, remoteId, signal, peer, signaling }) => {
-    logger.log(`Got ANSWER signal for ${remoteId}, sending it...`, { id, signal, peer, signaling })
+    logger.log(`Got ANSWER signal for ${remoteId}, sending it...`, {
+      id,
+      signal,
+      peer,
+      signaling,
+    })
     // TODO: add id of target peer to avoid using answers on peers that didn't send an offer
     signaling.send({ targetId: remoteId, signal })
   },
-  offer: ({ id, signal, peer, signaling }) => {
+  offer: ({ id, remoteId, signal, peer, signaling }) => {
     logger.log('Got OFFER signal', { id, signal, peer, signaling })
+    signaling.send({
+      id,
+      targetId: remoteId,
+      signal,
+    })
   },
-  candidate: ({ id, signal, peer, signaling }) => {
+  candidate: ({ id, remoteId, signal, peer, signaling }) => {
     logger.log('Got CANDIDATE signal', { id, signal, peer, signaling })
+    signaling.send({
+      id,
+      targetId: remoteId,
+      signal,
+    })
   },
 }
 
@@ -97,19 +89,8 @@ function createPeer(remoteId, isInitiator) {
   peer
     .onSignal(({ signal, id }) => {
       // Signals received from the Peer object are always local.
-      // logger.log('Own signal', signal)
       const type = signal.type || 'candidate'
       signalActionMap[type]({ id, remoteId, signal, peer, signaling })
-
-      // Store local signals.
-      if (!remoteId) {
-        logger.log('createPeer: add initial signal', signal)
-        initialSignals.add(signal)
-      } else {
-        logger.log(`createPeer: add local signal for: ${remoteId}`, signal)
-        localSignals[remoteId] = localSignals[remoteId] || []
-        localSignals[remoteId].push(signal)
-      }
     })
     .init()
 
@@ -122,22 +103,13 @@ function createPeer(remoteId, isInitiator) {
 
 function getPeer({ remoteId, connections, isInitiator }) {
   if (connections[remoteId]) {
-    logger.log(
-      `getPeer: Found connection for ${remoteId}:`,
-      connections[remoteId]
-    )
+    logger.log(`FOUND CONNECTION for ${remoteId}:`, connections[remoteId])
     return connections[remoteId].peer
   }
 
-  // Use existing Peer for first connection.
-  let peer
-  if (totalConnections === 0 && !isInitiator) {
-    peer = initialPeer
-    logger.log('getPeer: using initial peer', initialPeer)
-  } else {
-    peer = createPeer(remoteId, true)
-    logger.log('getPeer: new peer created', peer)
-  }
+  // Create a new peer.
+  const peer = createPeer(remoteId, isInitiator)
+  logger.log('NEW PEER created', peer)
 
   connections[remoteId] = {
     id: remoteId,
@@ -158,10 +130,10 @@ signaling.onRemoteSignal(({ id, targetId, type, signal }) => {
     logger.log(`Skipping messages for other peer ${targetId}`)
     return
   }
-  if (connections[id] && connections[id].connected) {
-    logger.log('Remote connection already stablished with', id)
-    return
-  }
+  // if (connections[id] && connections[id].connected) {
+  //   logger.log('Remote connection already stablished with', id)
+  //   return
+  // }
 
   // logger.log('Got remote message', { id, type, signal })
   signal = signal || {}
@@ -179,7 +151,13 @@ signaling.onRemoteSignal(({ id, targetId, type, signal }) => {
     }
   }
   const peer = getPeer({ remoteId: id, connections, isInitiator })
-  messageActionsMap[type]({ remoteId: id, peer, signal, signaling, isInitiator })
+  messageActionsMap[type]({
+    remoteId: id,
+    peer,
+    signal,
+    signaling,
+    isInitiator,
+  })
 })
 
 function Chat() {
@@ -187,11 +165,9 @@ function Chat() {
 }
 
 window.test = () => {
-  Object
-    .entries(connections)
-    .map(([id, connection]) => {
-      logger.log(`== SENDING TEST MESSAGE from ${localId} to ${id}`)
-      connection.peer.send({ m: `Hello ${id}! This is ${localId} :)`})
-    })
+  Object.entries(connections).map(([id, connection]) => {
+    logger.log(`== SENDING TEST MESSAGE from ${localId} to ${id}`)
+    connection.peer.send({ m: `Hello ${id}! This is ${localId} :)` })
+  })
 }
 export default Chat
