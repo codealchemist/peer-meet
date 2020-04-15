@@ -43,7 +43,7 @@ class Signaling {
   }
 
   onSignalMessage(message) {
-    const { signal, id, type } = message || {}
+    const { id } = message || {}
 
     // Ignore own messages.
     if (id === this.id) return this
@@ -65,7 +65,7 @@ class Signaling {
     // if (!signal) return this
 
     if (typeof this.onRemoteSignalCallback === 'function') {
-      this.onRemoteSignalCallback({ id, type, signal })
+      this.onRemoteSignalCallback(message)
     }
     return this
   }
