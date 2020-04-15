@@ -2,14 +2,16 @@ import SimplePeer from 'simple-peer'
 window.SimplePeer = SimplePeer
 
 class Peer {
-  constructor({ isInitiator = false, id } = {}) {
+  constructor({ isInitiator = false, id, stream } = {}) {
     this.isInitiator = isInitiator
     this.id = id
+    this.stream = stream
   }
 
   init() {
     this.peer = new SimplePeer({
       initiator: this.isInitiator,
+      stream: this.stream
     })
     this.setPeerEvents()
     return this
@@ -26,7 +28,17 @@ class Peer {
 
     this.peer.on('close', (err) => {
       console.log('close', err)
-      this.reconnect()
+      if (err) {
+        if (typeof this.onCloseCallback === 'function') {
+          this.onErrorCallback({ id: this.id, error: err })
+        }
+        return  
+      }
+
+      if (typeof this.onCloseCallback === 'function') {
+        this.onCloseCallback({ id: this.id })
+      }
+      // this.reconnect()
     })
 
     this.peer.on('signal', (signal) => {
@@ -34,6 +46,13 @@ class Peer {
       this.signal = signal
       if (typeof this.onSignalCallback === 'function') {
         this.onSignalCallback({ signal, id: this.id })
+      }
+    })
+
+    this.peer.on('stream', (stream) => {
+      this.stream = stream
+      if (typeof this.onStreamCallback === 'function') {
+        this.onStreamCallback({ stream, id: this.id })
       }
     })
 
@@ -65,6 +84,11 @@ class Peer {
     return this
   }
 
+  onClose(callback) {
+    this.onCloseCallback = callback
+    return this
+  }
+
   onData(callback) {
     this.onDataCallback = callback
     return this
@@ -72,6 +96,11 @@ class Peer {
 
   onSignal(callback) {
     this.onSignalCallback = callback
+    return this
+  }
+
+  onStream(callback) {
+    this.onStreamCallback = callback
     return this
   }
 
