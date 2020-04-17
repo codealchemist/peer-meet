@@ -139,6 +139,7 @@ const RemoteStreamsContainer = styled.div`
   video {
     width: 100vw;
     height: 100vh;
+    object-fit: cover;
   }
 
   ${({ totalConnections }) => {
@@ -304,6 +305,11 @@ function Chat() {
     video.addEventListener('click', (e) => {
       e.preventDefault()
       e.stopPropagation()
+      const container = document.getElementById(streamsContainerId)
+      const videoElements = container.querySelectorAll('video').length
+      if (!videoElements || videoElements <= 1) return
+      logger.log('Maximize / minimize video', videoElements)
+
       if (video.style.width === '100vw') {
         video.style.width = '100%'
         video.style.height = 'auto'
@@ -370,16 +376,16 @@ function Chat() {
     navigator.mediaDevices
       .getUserMedia({
         video: true,
-        audio: true,
+        audio: true
       })
       .then((stream) => {
         logger.log('---- GOT LOCAL STREAM 🎬', stream)
         localStream = stream
-        localAudio = localStream.getAudioTracks()[0]
+        localAudio = stream.getAudioTracks()[0]
         localVideoEl.current.srcObject = localStream
       })
       .catch(() => {})
-  })
+  }, [])
 
   return (
     <>
