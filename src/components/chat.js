@@ -1,5 +1,7 @@
 import React, { useGlobal, useState, useEffect } from 'reactn'
 import styled from 'styled-components'
+import MicIcon from '@material-ui/icons/Mic'
+import MicOffIcon from '@material-ui/icons/MicOff'
 import { nanoid } from 'nanoid'
 import Peer from 'services/peer'
 import Signaling from 'services/signaling'
@@ -10,6 +12,7 @@ const connections = {}
 const id = nanoid(12) // Our own id.
 const localId = id
 let localStream = null
+let localAudio = null
 const initiatorId = getRemoteId()
 const signaling = new Signaling(id, initiatorId)
 signaling.init(id)
@@ -40,7 +43,7 @@ const messageActionsMap = {
   candidate: ({ peer, signal, signaling }) => {
     logger.log('Got candidate', { peer, signal, signaling })
     peer.connect(signal)
-  }
+  },
 }
 
 // Local signals.
@@ -57,7 +60,7 @@ const signalActionMap = {
   candidate: ({ id, remoteId, signal, peer, signaling }) => {
     logger.log('Got CANDIDATE signal, sending it...')
     signaling.send({ type: 'candidate', targetId: remoteId, signal })
-  }
+  },
 }
 
 function createPeer({ remoteId, type, addStream, removeStream }) {
@@ -66,7 +69,7 @@ function createPeer({ remoteId, type, addStream, removeStream }) {
   const peer = new Peer({
     id,
     isInitiator,
-    stream: localStream
+    stream: localStream,
   })
   peer
     .onSignal(({ signal, id }) => {
@@ -80,10 +83,12 @@ function createPeer({ remoteId, type, addStream, removeStream }) {
     })
     .onClose(() => {
       logger.log(`CLOSED ${remoteId} `)
+      delete connections[remoteId]
       removeStream(remoteId)
     })
     .onError(({ id, error }) => {
       logger.log(`ERROR on ${remoteId} ❌`, error)
+      delete connections[remoteId]
       removeStream(remoteId)
     })
     .init()
@@ -105,7 +110,7 @@ function getPeer({
   type,
   totalConnections,
   addStream,
-  removeStream
+  removeStream,
 }) {
   if (connections[remoteId]) {
     logger.log(`FOUND CONNECTION for ${remoteId}:`, connections[remoteId])
@@ -129,7 +134,6 @@ const RemoteStreamsContainer = styled.div`
   position: fixed;
   top: 0;
   width: 100%;
-  height: 100%;
   z-index: 10;
   display: grid;
   video {
@@ -137,12 +141,12 @@ const RemoteStreamsContainer = styled.div`
     height: 100vh;
   }
 
-  ${({totalConnections}) => {
+  ${({ totalConnections }) => {
     let video = ''
     if (totalConnections > 1) {
       video = `
         video {
-          width: auto;
+          width: 100%;
           height: auto;
         }
       `
@@ -234,22 +238,36 @@ const Background = styled.div`
   height: 100%;
   z-index: -1;
   top: 0;
-  
+
   div {
     font-size: 40vw;
     opacity: 0.2;
-    filter: blur(4px)
+    filter: blur(4px);
   }
+`
+
+const MuteButtonContainer = styled.div`
+  position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  left: 10px;
+  bottom: 10px;
+  width: 10vh;
+  height: 10vh;
+  cursor: pointer;
+  z-index: 20;
 `
 
 function Chat() {
   const [totalConnections, setTotalConnections] = useState(0)
   const [showLocalVideo, setShowLocalVideo] = useState(true)
+  const [muted, setMuted] = useState(false)
   const streamsContainerId = 'streams-container'
   let streamsContainerEl = null
   const localVideoEl = React.createRef()
 
-  const addStream = ({id, peer, stream}) => {
+  const addStream = ({ id, peer, stream }) => {
     setTotalConnections(totalConnections + 1)
     logger.log('GOT REMOTE STREAM 🎬', peer)
     const video = document.createElement('video')
@@ -260,6 +278,32 @@ function Chat() {
       return
     }
     streamsContainerEl.appendChild(video)
+    video.addEventListener('dblclick', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      video.width = '100vw'
+    })
+
+    // Maximize / minimize video.
+    video.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (video.style.width === '100vw') {
+        video.style.width = '100%'
+        video.style.height = 'auto'
+        video.style.objectFit = 'unset'
+        video.style.zIndex = 10
+        video.style.position = 'relative'
+      } else {
+        video.style.width = '100vw'
+        video.style.height = '100vh'
+        video.style.objectFit = 'cover'
+        video.style.zIndex = 11
+        video.style.position = 'absolute'
+        video.style.top = 0
+        video.style.left = 0
+      }
+    })
     video.play()
   }
 
@@ -288,48 +332,60 @@ function Chat() {
       type,
       totalConnections,
       addStream,
-      removeStream
+      removeStream,
     })
     messageActionsMap[type]({
       remoteId: id,
       peer,
       signal,
-      signaling
+      signaling,
     })
   })
+
+  const mute = () => {
+    setMuted(!muted)
+    localAudio.enabled = muted
+  }
 
   useEffect(() => {
     streamsContainerEl = document.querySelector(`#${streamsContainerId}`)
 
     // Get browser media stream.
-    navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true
-    }).then((stream) => {
-      logger.log('---- GOT LOCAL STREAM 🎬', stream)
-      localStream = stream
-      localVideoEl.current.srcObject = localStream
-    }).catch(() => {})
+    navigator.mediaDevices
+      .getUserMedia({
+        video: true,
+        audio: true,
+      })
+      .then((stream) => {
+        logger.log('---- GOT LOCAL STREAM 🎬', stream)
+        localStream = stream
+        localAudio = localStream.getAudioTracks()[0]
+        localVideoEl.current.srcObject = localStream
+      })
+      .catch(() => {})
   })
 
   return (
     <>
       <Title onClick={() => setShowLocalVideo(true)}>{localId}</Title>
-      <Stats>
-        🔌 {totalConnections}
-      </Stats>
+      <Stats>🔌 {totalConnections}</Stats>
 
-      { showLocalVideo &&
+      {showLocalVideo && (
         <LocalVideo
           ref={localVideoEl}
           onClick={() => setShowLocalVideo(false)}
           autoPlay
           muted
-        /> 
-      }
-      <RemoteStreamsContainer id="streams-container" totalConnections={totalConnections}>
-        
-      </RemoteStreamsContainer>
+        />
+      )}
+      <RemoteStreamsContainer
+        id="streams-container"
+        totalConnections={totalConnections}
+      ></RemoteStreamsContainer>
+      <MuteButtonContainer onClick={mute}>
+        {muted && <MicOffIcon />}
+        {!muted && <MicIcon />}
+      </MuteButtonContainer>
       <Background>
         <div>🎬</div>
       </Background>
@@ -343,7 +399,7 @@ window.test = (msg) => {
     connection.peer.send({
       from: localId,
       to: id,
-      m: msg || `Hello ${id}! This is ${localId} :)`
+      m: msg || `Hello ${id}! This is ${localId} :)`,
     })
   })
 }

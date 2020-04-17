@@ -11,7 +11,7 @@ class Peer {
   init() {
     this.peer = new SimplePeer({
       initiator: this.isInitiator,
-      stream: this.stream
+      stream: this.stream,
     })
     this.setPeerEvents()
     return this
@@ -32,7 +32,7 @@ class Peer {
         if (typeof this.onCloseCallback === 'function') {
           this.onErrorCallback({ id: this.id, error: err })
         }
-        return  
+        return
       }
 
       if (typeof this.onCloseCallback === 'function') {
