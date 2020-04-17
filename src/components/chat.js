@@ -239,6 +239,7 @@ function Chat() {
           ref={localVideoEl}
           onClick={() => setShowLocalVideo(false)}
           autoPlay
+          muted
         /> 
       }
       <RemoteStreamsContainer id="streams-container"></RemoteStreamsContainer>
