@@ -22,12 +22,12 @@ class Peer {
     this.peer.on('error', (err) => {
       console.log('error', err)
       if (typeof this.onErrorCallback === 'function') {
-        this.onErrorCallback(err)
+        this.onErrorCallback({ id: this.id, error: err })
       }
     })
 
     this.peer.on('close', (err) => {
-      console.log('close', err)
+      console.log('close, err:', err)
       if (err) {
         if (typeof this.onCloseCallback === 'function') {
           this.onErrorCallback({ id: this.id, error: err })
