@@ -104,7 +104,6 @@ function getPeer({
   connections,
   type,
   totalConnections,
-  setTotalConnections,
   addStream,
   removeStream
 }) {
@@ -123,19 +122,80 @@ function getPeer({
     connected: false,
   }
 
-  setTotalConnections(totalConnections + 1)
   return peer
 }
 
 const RemoteStreamsContainer = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-
+  position: fixed;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  display: grid;
   video {
-    width: 40vw;
+    width: 100vw;
+    height: 100vh;
   }
+
+  ${({totalConnections}) => {
+    let video = ''
+    if (totalConnections > 1) {
+      video = `
+        video {
+          width: auto;
+          height: auto;
+        }
+      `
+    }
+
+    if (totalConnections === 2) {
+      return `
+        ${video}
+        grid-template-columns: 50% 50%;
+        grid-template-rows: 100%;
+      `
+    }
+
+    if (totalConnections >= 3) {
+      return `
+        ${video}
+        grid-template-columns: 50% 50%;
+        grid-template-rows: 50% 50%;
+      `
+    }
+
+    if (totalConnections >= 5) {
+      return `
+        ${video}
+        grid-template-columns: 33% 33% 33%;
+        grid-template-rows: 50% 50%;
+      `
+    }
+
+    if (totalConnections >= 7) {
+      return `
+        ${video}
+        grid-template-columns: 33% 33% 33%;
+        grid-template-rows: 33% 33% 33%;
+      `
+    }
+
+    if (totalConnections >= 9) {
+      return `
+        ${video}
+        grid-template-columns: 33% 33% 33%;
+        grid-template-rows: 25% 25% 25% 25%;
+      `
+    }
+
+    if (totalConnections >= 12) {
+      return `
+        ${video}
+        grid-template-columns: 25% 25% 25% 25%;
+        grid-template-rows: 25% 25% 25% 25%;
+      `
+    }
+  }}
 `
 
 const LocalVideo = styled.video`
@@ -144,18 +204,42 @@ const LocalVideo = styled.video`
   top: 10px;
   right: 10px;
   cursor: pointer;
+  z-index: 20;
 `
 
 const Title = styled.h2`
   text-align: left;
   margin: 10px;
   cursor: pointer;
+  z-index: 30;
+  background: black;
+  padding: 10px;
+  border-radius: 5px;
+  position: fixed;
+  opacity: 0.5;
 `
 
 const Stats = styled.div`
   position: fixed;
   bottom: 10px;
   right: 10px;
+`
+
+const Background = styled.div`
+  position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  top: 0;
+  
+  div {
+    font-size: 40vw;
+    opacity: 0.2;
+    filter: blur(4px)
+  }
 `
 
 function Chat() {
@@ -166,6 +250,7 @@ function Chat() {
   const localVideoEl = React.createRef()
 
   const addStream = ({id, peer, stream}) => {
+    setTotalConnections(totalConnections + 1)
     logger.log('GOT REMOTE STREAM 🎬', peer)
     const video = document.createElement('video')
     video.srcObject = stream
@@ -179,6 +264,7 @@ function Chat() {
   }
 
   const removeStream = (id) => {
+    setTotalConnections(totalConnections - 1)
     const video = document.getElementById(id)
     if (!video) return
     video.remove()
@@ -201,7 +287,6 @@ function Chat() {
       connections,
       type,
       totalConnections,
-      setTotalConnections,
       addStream,
       removeStream
     })
@@ -242,7 +327,12 @@ function Chat() {
           muted
         /> 
       }
-      <RemoteStreamsContainer id="streams-container"></RemoteStreamsContainer>
+      <RemoteStreamsContainer id="streams-container" totalConnections={totalConnections}>
+        
+      </RemoteStreamsContainer>
+      <Background>
+        <div>🎬</div>
+      </Background>
     </>
   )
 }
