@@ -74,6 +74,11 @@ function createPeer({ remoteId, type, addStream, removeStream }) {
   peer
     .onSignal(({ signal, id }) => {
       // Signals received from the Peer object are always local.
+      if (connections[remoteId] && connections[remoteId].connected) {
+        logger.log('Already connected! Avoid sending more signals.')
+        return
+      }
+
       const type = signal.type || 'candidate'
       signalActionMap[type]({ id, remoteId, signal, peer, signaling })
     })
@@ -88,15 +93,13 @@ function createPeer({ remoteId, type, addStream, removeStream }) {
     })
     .onError(({ id, error }) => {
       logger.log(`ERROR on ${remoteId} ❌`, error)
-      delete connections[remoteId]
-      removeStream(remoteId)
+      // peer.reconnect()
     })
     .init()
 
   peer.onConnect(() => {
     logger.log(`${localId} CONNECTED to ${remoteId}`)
     connections[remoteId].connected = true
-    peer.send({ rock: 'yeah!' })
   })
 
   return peer
@@ -134,6 +137,7 @@ const RemoteStreamsContainer = styled.div`
   position: fixed;
   top: 0;
   width: 100%;
+  height: 100%;
   z-index: 10;
   display: grid;
   video {
@@ -148,7 +152,6 @@ const RemoteStreamsContainer = styled.div`
       video = `
         video {
           width: 100%;
-          height: auto;
         }
       `
     }
@@ -224,12 +227,6 @@ const Title = styled.h2`
   opacity: 0.5;
 `
 
-const Stats = styled.div`
-  position: fixed;
-  bottom: 3.5vw;
-  right: 3.5vw;
-`
-
 const Background = styled.div`
   position: fixed;
   display: flex;
@@ -290,16 +287,17 @@ function Chat() {
     const video = document.createElement('video')
     video.srcObject = stream
     video.id = id
+    video.autoplay = true
+
+    // TODO: Find a better way.
+    // For some reason the container goes back to null sometimes.
+    // Probably React redraws it.
+    streamsContainerEl = document.querySelector(`#${streamsContainerId}`)
     if (!streamsContainerEl) {
       logger.log('EMPTY CONTAINER!', streamsContainerEl)
       return
     }
     streamsContainerEl.appendChild(video)
-    video.addEventListener('dblclick', (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      video.width = '100vw'
-    })
 
     // Maximize / minimize video.
     video.addEventListener('click', (e) => {
@@ -326,11 +324,14 @@ function Chat() {
         video.style.left = 0
       }
     })
-    video.play()
   }
 
   const removeStream = (id) => {
-    setTotalConnections(totalConnections - 1)
+    let updatedConnectionsCount = totalConnections - 1
+    if (updatedConnectionsCount < 0) {
+      updatedConnectionsCount = 0
+    }
+    setTotalConnections(updatedConnectionsCount)
     const video = document.getElementById(id)
     if (!video) return
     video.remove()
@@ -339,6 +340,11 @@ function Chat() {
   signaling.onRemoteSignal(({ id, targetId, type, signal }) => {
     if (targetId && targetId !== localId) {
       logger.log(`Skipping messages for other peer ${targetId}`)
+      return
+    }
+
+    if (connections[id] && connections[id].connected) {
+      logger.log(`Already connected! Skipping message from ${id}`)
       return
     }
 
