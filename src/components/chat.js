@@ -289,6 +289,14 @@ function Chat() {
     video.id = id
     video.autoplay = true
 
+    const videoContainer = document.createElement('div')
+    videoContainer.appendChild(video)
+    videoContainer.style.width = '100%'
+    videoContainer.style.height = '100%'
+    videoContainer.style.display = 'flex'
+    videoContainer.style.alignItems = 'center'
+    videoContainer.style.overflow = 'hidden'
+
     // TODO: Find a better way.
     // For some reason the container goes back to null sometimes.
     // Probably React redraws it.
@@ -297,7 +305,7 @@ function Chat() {
       logger.log('EMPTY CONTAINER!', streamsContainerEl)
       return
     }
-    streamsContainerEl.appendChild(video)
+    streamsContainerEl.appendChild(videoContainer)
 
     // Maximize / minimize video.
     video.addEventListener('click', (e) => {
