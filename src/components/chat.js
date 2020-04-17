@@ -225,8 +225,8 @@ const Title = styled.h2`
 
 const Stats = styled.div`
   position: fixed;
-  bottom: 10px;
-  right: 10px;
+  bottom: 3.5vw;
+  right: 3.5vw;
 `
 
 const Background = styled.div`
@@ -246,17 +246,33 @@ const Background = styled.div`
   }
 `
 
-const MuteButtonContainer = styled.div`
+const BottomButtonContainer = styled.div`
   position: fixed;
   display: flex;
   align-items: center;
   justify-content: center;
-  left: 10px;
   bottom: 10px;
   width: 10vh;
   height: 10vh;
   cursor: pointer;
   z-index: 20;
+  color: #ddd;
+`
+
+const BottomLeftButtonContainer = styled(BottomButtonContainer)`
+  left: 10px;
+`
+
+const BottomRightButtonContainer = styled(BottomButtonContainer)`
+  right: 10px;
+`
+
+const StyledMicOn = styled(MicIcon)`
+  color: red;
+`
+
+const StyledMicOff = styled(MicOffIcon)`
+  color: white;
 `
 
 function Chat() {
@@ -368,8 +384,6 @@ function Chat() {
   return (
     <>
       <Title onClick={() => setShowLocalVideo(true)}>{localId}</Title>
-      <Stats>🔌 {totalConnections}</Stats>
-
       {showLocalVideo && (
         <LocalVideo
           ref={localVideoEl}
@@ -382,10 +396,13 @@ function Chat() {
         id="streams-container"
         totalConnections={totalConnections}
       ></RemoteStreamsContainer>
-      <MuteButtonContainer onClick={mute}>
-        {muted && <MicOffIcon />}
-        {!muted && <MicIcon />}
-      </MuteButtonContainer>
+      <BottomLeftButtonContainer onClick={mute}>
+        {muted && <StyledMicOff />}
+        {!muted && <StyledMicOn />}
+      </BottomLeftButtonContainer>
+      <BottomRightButtonContainer>
+        🔌 {totalConnections}
+      </BottomRightButtonContainer>
       <Background>
         <div>🎬</div>
       </Background>
