@@ -74,10 +74,10 @@ function createPeer({ remoteId, type, addStream, removeStream }) {
   peer
     .onSignal(({ signal, id }) => {
       // Signals received from the Peer object are always local.
-      if (connections[remoteId] && connections[remoteId].connected) {
-        logger.log('Already connected! Avoid sending more signals.')
-        return
-      }
+      // if (connections[remoteId] && connections[remoteId].connected) {
+      //   logger.log('Already connected! Avoid sending more signals.')
+      //   return
+      // }
 
       const type = signal.type || 'candidate'
       signalActionMap[type]({ id, remoteId, signal, peer, signaling })
@@ -289,14 +289,6 @@ function Chat() {
     video.id = id
     video.autoplay = true
 
-    const videoContainer = document.createElement('div')
-    videoContainer.appendChild(video)
-    videoContainer.style.width = '100%'
-    videoContainer.style.height = '100%'
-    videoContainer.style.display = 'flex'
-    videoContainer.style.alignItems = 'center'
-    videoContainer.style.overflow = 'hidden'
-
     // TODO: Find a better way.
     // For some reason the container goes back to null sometimes.
     // Probably React redraws it.
@@ -305,7 +297,7 @@ function Chat() {
       logger.log('EMPTY CONTAINER!', streamsContainerEl)
       return
     }
-    streamsContainerEl.appendChild(videoContainer)
+    streamsContainerEl.appendChild(video)
 
     // Maximize / minimize video.
     video.addEventListener('click', (e) => {
@@ -351,10 +343,10 @@ function Chat() {
       return
     }
 
-    if (connections[id] && connections[id].connected) {
-      logger.log(`Already connected! Skipping message from ${id}`)
-      return
-    }
+    // if (connections[id] && connections[id].connected) {
+    //   logger.log(`Already connected! Skipping message from ${id}`)
+    //   return
+    // }
 
     signal = signal || {}
     type = type || signal.type
