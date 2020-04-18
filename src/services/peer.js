@@ -2,16 +2,24 @@ import SimplePeer from 'simple-peer'
 window.SimplePeer = SimplePeer
 
 class Peer {
-  constructor({ isInitiator = false, id, stream } = {}) {
+  constructor({ isInitiator = false, id, stream, config } = {}) {
     this.isInitiator = isInitiator
     this.id = id
     this.stream = stream
+    this.config = config || {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:global.stun.twilio.com:3478?transport=udp' },
+      ],
+    }
   }
 
   init() {
     this.peer = new SimplePeer({
       initiator: this.isInitiator,
       stream: this.stream,
+      config: this.config,
+      trickle: true,
     })
     this.setPeerEvents()
     return this
@@ -42,7 +50,6 @@ class Peer {
     })
 
     this.peer.on('signal', (signal) => {
-      console.log('SIGNAL', JSON.stringify(signal))
       this.signal = signal
       if (typeof this.onSignalCallback === 'function') {
         this.onSignalCallback({ signal, id: this.id })
@@ -57,7 +64,7 @@ class Peer {
     })
 
     this.peer.on('connect', () => {
-      console.log('--- CONNECT ---')
+      console.log('--- PEER CONNECTED ---')
       if (typeof this.onConnectCallback === 'function') {
         this.onConnectCallback()
       }

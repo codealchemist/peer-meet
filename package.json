@@ -34,6 +34,7 @@
   "devDependencies": {
     "@material-ui/core": "^4.9.10",
     "@material-ui/icons": "^4.9.1",
+    "@vardius/react-user-media": "^1.0.1",
     "nanoid": "^3.1.3",
     "reactn": "^2.2.7",
     "signalhub": "^4.9.0",
