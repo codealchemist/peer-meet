@@ -305,7 +305,7 @@ function Chat() {
       e.stopPropagation()
       const container = document.getElementById(streamsContainerId)
       const videoElements = container.querySelectorAll('video').length
-      if (!videoElements || videoElements <= 1) return
+      if (!videoElements || videoElements <= 1) return
       logger.log('Maximize / minimize video', videoElements)
 
       if (video.style.width === '100vw') {
@@ -382,7 +382,7 @@ function Chat() {
     navigator.mediaDevices
       .getUserMedia({
         video: true,
-        audio: true
+        audio: true,
       })
       .then((stream) => {
         logger.log('---- GOT LOCAL STREAM 🎬', stream)
