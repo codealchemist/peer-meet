@@ -10,6 +10,19 @@ class Peer {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:global.stun.twilio.com:3478?transport=udp' },
+        { urls: 'stun.speedy.com.ar:3478' },
+        {
+          urls: 'turn:global.turn.twilio.com:3478?transport=udp',
+          username:
+            '744903e79aa049c9ebf2787cd1a399207a27241a399348cf97c49a60570d9e87',
+          credential: 'EJWsh2g9fTxuevIumEY8rRmI9oeHfA4UqnzLy39SdZ0=',
+        },
+        {
+          urls: 'turns:global.turn.twilio.com:443?transport=tcp',
+          username:
+            '744903e79aa049c9ebf2787cd1a399207a27241a399348cf97c49a60570d9e87',
+          credential: 'EJWsh2g9fTxuevIumEY8rRmI9oeHfA4UqnzLy39SdZ0=',
+        },
       ],
     }
   }
