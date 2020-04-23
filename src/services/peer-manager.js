@@ -7,7 +7,7 @@ const logger = new Logger('PEER-MANAGER')
 const connections = {}
 export const localId = nanoid(12) // Our own id.
 const initiatorId = getRemoteId()
-const signaling = new Signaling(localId, initiatorId)
+const signaling = new Signaling(localId, initiatorId, 'wss:holis-turn.tk:3333')
 signaling.init(localId)
 
 class PeerManager {
@@ -25,7 +25,7 @@ const peerManager = new PeerManager()
 if (initiatorId) {
   // Kickoff signaling.
   logger.log('KICKOFF! Send request...')
-  signaling.send({ type: 'request' })
+  signaling.send({ id: localId, type: 'request' })
 } else {
   logger.log('We are the FIRST PEER 🤘')
 }
@@ -49,6 +49,12 @@ const messageActionsMap = {
     logger.log('Got candidate', { peer, signal, signaling })
     peer.connect(signal)
   },
+  disconnect: ({ remoteId, peer, signal, signaling }) => {
+    logger.log('WebSocket client disconnected:', remoteId)
+  },
+  uuid: ({ remoteId, peer, signal, signaling }) => {
+    // TODO
+  }
 }
 
 // Local signals.
@@ -56,15 +62,15 @@ const messageActionsMap = {
 const signalActionMap = {
   answer: ({ id, remoteId, signal, peer, signaling }) => {
     logger.log(`Got ANSWER signal for ${remoteId}, sending it...`)
-    signaling.send({ type: 'answer', targetId: remoteId, signal })
+    signaling.send({ id: localId, type: 'answer', targetId: remoteId, signal })
   },
   offer: ({ id, remoteId, signal, peer, signaling }) => {
     logger.log('Got OFFER signal, sending it...')
-    signaling.send({ type: 'offer', targetId: remoteId, signal })
+    signaling.send({ id: localId, type: 'offer', targetId: remoteId, signal })
   },
   candidate: ({ id, remoteId, signal, peer, signaling }) => {
     logger.log('Got CANDIDATE signal, sending it...')
-    signaling.send({ type: 'candidate', targetId: remoteId, signal })
+    signaling.send({ id: localId, type: 'candidate', targetId: remoteId, signal })
   },
 }
 
@@ -151,11 +157,19 @@ signaling.onRemoteSignal(({ id, targetId, type, signal }) => {
     type = 'candidate'
   }
 
+  if (!type) return
+
   const peer = getPeer({
     remoteId: id,
     connections,
     type,
   })
+
+  if (typeof messageActionsMap[type] !== 'function') {
+    logger.log(`No handler for "${type}" message type.`)
+    return
+  }
+
   messageActionsMap[type]({
     remoteId: id,
     peer,

@@ -1,12 +1,16 @@
-import signalhub from 'signalhub'
-
 class Signaling {
-  constructor(id, remoteId) {
+  constructor(id, remoteId, serverUrl) {
+    if (!serverUrl) {
+      console.error('SIGNALING ERROR: serverUrl is required!')
+    }
+
     this.id = id
     this.initiatorId = remoteId
     this.isInitiator = !remoteId
     this.baseUrl = `${window.location.protocol}//${window.location.host}`
     this.onErrorCallback = null
+    this.isConnected = false
+    this.serverUrl = serverUrl
 
     // Set sharing URL only when not connecting to an initiator.
     // The initiator creates sharing.
@@ -24,45 +28,34 @@ class Signaling {
   init() {
     console.log('PEER ID', this.id)
     console.log('INITIATOR ID:', this.initiatorId || `${this.id} (me)`)
-    this.channelName = this.initiatorId || this.id
-    console.log('CHANNEL', this.channelName)
-    this.hub = signalhub('peer-chat', [
-      'https://peer-chat-signalhub.herokuapp.com',
-    ])
-    this.hub
-      .subscribe(this.channelName)
-      .on('data', (message) => this.onSignalMessage(message))
-
-    // If not the initiator, request offer to initiator.
-    // if (!this.isInitiator) {
-    //   console.log('Signaling: SEND REQUEST MSG')
-    //   this.hub.broadcast(this.channelName, { id: this.id, type: 'request' })
-    // }
+    this.channelId = this.initiatorId || this.id
+    console.log('CHANNEL', this.channelId)
+    this.socket = new WebSocket(`${this.serverUrl}/${this.channelId}`)
+    this.socket.onopen = () => {
+      this.isConnected = true
+      console.log('SOCKET CONNECTED')
+    }
+    this.socket.onmessage = message => this.onMessage(message)
+    this.socket.onclose = (event) => {
+      this.isConnected = false
+      if (event.wasClean) {
+        console.log(`WebSocket connection closed cleanly, code=${event.code} reason=${event.reason}`)
+      } else {
+        // e.g. server process killed or network down
+        // event.code is usually 1006 in this case
+        console.log('WebSocket connection died')
+      }
+    }
+    this.socket.onerror = (error) => {
+      console.log('WebSocket connection error:', error.message)
+    }
 
     return this
   }
 
-  onSignalMessage(message) {
-    const { id } = message || {}
-
-    // Ignore own messages.
-    if (id === this.id) return this
+  onMessage({ data }) {
+    const message = JSON.parse(data)
     console.log('new message received', message)
-
-    // Only the initiator will answer with offers to other peers.
-    // Send offer using signaling channel.
-    // if (type === 'request') {
-    //   this.hub.broadcast(this.channelName, {
-    //     id: this.id,
-    //     type: 'offer',
-    //     signal: this.getOfferSignal(),
-    //   })
-    //   return this
-    // }
-
-    // Only normal peers will use signaling data from the initiator.
-    // if (!this.isInitiator && type === 'request') return this
-    // if (!signal) return this
 
     if (typeof this.onRemoteSignalCallback === 'function') {
       this.onRemoteSignalCallback(message)
@@ -71,10 +64,15 @@ class Signaling {
   }
 
   send(message) {
-    this.hub.broadcast(this.channelName, {
-      id: this.id,
-      ...message,
-    })
+    // Wait for connection.
+    if (!this.isConnected) {
+      console.log('Wait for socket connection...')
+      setTimeout(() => this.send(message), 250)
+      return
+    }
+
+    const data = JSON.stringify(message)
+    this.socket.send(data)
     return this
   }
 
