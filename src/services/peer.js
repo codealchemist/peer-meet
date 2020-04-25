@@ -15,8 +15,8 @@ class Peer {
           urls: 'turn:holis-turn.tk:3478',
           username: 'bert',
           credential: 'test'
-        },
-      ],
+        }
+      ]
     }
   }
 
@@ -25,7 +25,7 @@ class Peer {
       initiator: this.isInitiator,
       stream: this.stream,
       config: this.config,
-      trickle: true,
+      trickle: true
     })
     this.setPeerEvents()
     return this
@@ -69,6 +69,12 @@ class Peer {
       }
     })
 
+    this.peer.on('track', (track, stream) => {
+      if (typeof this.onTrackCallback === 'function') {
+        this.onTrackCallback({ track, stream, id: this.id })
+      }
+    })
+
     this.peer.on('connect', () => {
       console.log('--- PEER CONNECTED ---')
       if (typeof this.onConnectCallback === 'function') {
@@ -82,8 +88,6 @@ class Peer {
         this.onDataCallback(data)
       }
     })
-
-    window.peer = this.peer
   }
 
   reconnect() {
@@ -117,6 +121,11 @@ class Peer {
     return this
   }
 
+  onTrack(callback) {
+    this.onTrackCallback = callback
+    return this
+  }
+
   onConnect(callback) {
     this.onConnectCallback = callback
     return this
@@ -135,6 +144,10 @@ class Peer {
 
   destroy() {
     this.peer.destroy()
+  }
+
+  getPeerObject() {
+    return this.peer
   }
 }
 

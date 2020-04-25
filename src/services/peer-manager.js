@@ -7,8 +7,13 @@ const logger = new Logger('PEER-MANAGER')
 const connections = {}
 export const localId = nanoid(12) // Our own id.
 const initiatorId = getRemoteId()
-const signaling = new Signaling(localId, initiatorId, 'wss:holis-turn.tk:3333')
+const signalingServer =
+  process.env.NODE_ENV === 'production'
+    ? 'wss:holis-turn.tk:3333'
+    : 'ws:localhost:3333'
+const signaling = new Signaling(localId, initiatorId, signalingServer)
 signaling.init(localId)
+logger.log('Signaling server:', signalingServer)
 
 class PeerManager {
   setHooks({ addStream, removeStream }) {
@@ -18,6 +23,20 @@ class PeerManager {
 
   setStream(stream) {
     this.localStream = stream
+  }
+
+  changeVideoStream({ videoTracks, newStream, oldStream }) {
+    if (!videoTracks || !oldStream) return
+    if (!connections || connections.length) return
+
+    const { currentVideoTrack, newVideoTrack } = videoTracks
+    this.setStream(newStream)
+    Object.entries(connections).map(([remoteId, { peer, stream }]) => {
+      if (!stream) return
+      const peerObj = peer.getPeerObject()
+      peerObj.replaceTrack(currentVideoTrack, newVideoTrack, oldStream)
+      logger.log('Replaced video stream.')
+    })
   }
 }
 const peerManager = new PeerManager()
@@ -70,8 +89,13 @@ const signalActionMap = {
   },
   candidate: ({ id, remoteId, signal, peer, signaling }) => {
     logger.log('Got CANDIDATE signal, sending it...')
-    signaling.send({ id: localId, type: 'candidate', targetId: remoteId, signal })
-  },
+    signaling.send({
+      id: localId,
+      type: 'candidate',
+      targetId: remoteId,
+      signal
+    })
+  }
 }
 
 function createPeer({ remoteId, type }) {
@@ -80,7 +104,7 @@ function createPeer({ remoteId, type }) {
   const peer = new Peer({
     id: localId,
     isInitiator,
-    stream: peerManager.localStream,
+    stream: peerManager.localStream
   })
   peer
     .onSignal(({ signal, id }) => {
@@ -96,7 +120,14 @@ function createPeer({ remoteId, type }) {
     .onStream(({ stream, id }) => {
       logger.log(`Set STREAM from ${id} 🎬`)
       peerManager.addStream({ id: remoteId, peer, stream })
+      connections[remoteId].stream = stream
     })
+    // .onTrack(({ id, track, stream }) => {
+    //   if (!connections[remoteId]) return
+    //   logger.log('Got peer media track', track)
+    //   connections[remoteId].tracks = connections[remoteId].tracks || {}
+    //   connections[remoteId].tracks[track.kind] = { track, stream }
+    // })
     .onClose(() => {
       logger.log(`CLOSED ${remoteId} `)
       delete connections[remoteId]
@@ -127,14 +158,14 @@ function getPeer({ remoteId, connections, type }) {
   // Create a new peer.
   const peer = createPeer({
     remoteId,
-    type,
+    type
   })
   logger.log('NEW PEER created', peer)
 
   connections[remoteId] = {
     id: remoteId,
     peer,
-    connected: false,
+    connected: false
   }
 
   return peer
@@ -162,7 +193,7 @@ signaling.onRemoteSignal(({ id, targetId, type, signal }) => {
   const peer = getPeer({
     remoteId: id,
     connections,
-    type,
+    type
   })
 
   if (typeof messageActionsMap[type] !== 'function') {
@@ -174,7 +205,7 @@ signaling.onRemoteSignal(({ id, targetId, type, signal }) => {
     remoteId: id,
     peer,
     signal,
-    signaling,
+    signaling
   })
 })
 
@@ -186,7 +217,7 @@ window.test = (msg) => {
     connection.peer.send({
       from: localId,
       to: id,
-      m: msg || `Hello ${id}! This is ${localId} :)`,
+      m: msg || `Hello ${id}! This is ${localId} :)`
     })
   })
 }
