@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import peerManager, { localId } from 'services/peer-manager'
+import { startCapture } from 'services/screen-share'
 import { Logger } from 'helpers'
 import Video from './video'
 import {
@@ -11,6 +12,8 @@ import {
   BottomRightButtonContainer,
   StyledMicOn,
   StyledMicOff,
+  StyledScreenShareOn,
+  StyledScreenShareOff
 } from './elements'
 
 const logger = new Logger('CHAT')
@@ -22,6 +25,8 @@ function Chat() {
   const [streams, setStreams] = useState([])
   const [localAudio, setLocalAudio] = useState()
   const [localStream, setLocalStream] = useState()
+  const [isScreenSharing, setIsScreenSharing] = useState(false)
+  const [screenSharingStream, setScreenSharingStream] = useState()
 
   const addStream = ({ id, peer, stream }) => {
     logger.log(`addStream: GOT REMOTE STREAM 🎬 from ${id}`, peer)
@@ -46,12 +51,28 @@ function Chat() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
-        audio: true,
+        audio: true
       })
       callback(stream)
     } catch (err) {
       logger.log('ERROR getting user media:', err)
     }
+  }
+
+  const shareScreen = async () => {
+    if (isScreenSharing) {
+      setIsScreenSharing(false)
+      removeStream(localId)
+      screenSharingStream.getTracks().forEach((track) => track.stop())
+      setScreenSharingStream(null)
+      return
+    }
+
+    const stream = await startCapture()
+    if (!stream) return
+    addStream({ id: localId, stream })
+    setScreenSharingStream(stream)
+    setIsScreenSharing(true)
   }
 
   // Init peer manager, which will handle signaling and peer interaction.
@@ -85,9 +106,12 @@ function Chat() {
           <Video id={id} stream={stream} key={id} />
         ))}
       </RemoteStreamsContainer>
-      <BottomLeftButtonContainer onClick={mute}>
-        {muted && <StyledMicOff />}
-        {!muted && <StyledMicOn />}
+      <BottomLeftButtonContainer>
+        {muted && <StyledMicOff onClick={mute} />}
+        {!muted && <StyledMicOn onClick={mute} />}
+
+        {isScreenSharing && <StyledScreenShareOn onClick={shareScreen} />}
+        {!isScreenSharing && <StyledScreenShareOff onClick={shareScreen} />}
       </BottomLeftButtonContainer>
       <BottomRightButtonContainer>
         🔌 {totalConnections}
