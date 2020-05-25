@@ -15,8 +15,8 @@ class Peer {
           urls: 'turn:holis-turn.tk:3478',
           username: 'bert',
           credential: 'test'
-        },
-      ],
+        }
+      ]
     }
   }
 
@@ -25,7 +25,7 @@ class Peer {
       initiator: this.isInitiator,
       stream: this.stream,
       config: this.config,
-      trickle: true,
+      trickle: true
     })
     this.setPeerEvents()
     return this
@@ -131,6 +131,14 @@ class Peer {
 
   connect(remoteSignal) {
     this.peer.signal(remoteSignal)
+  }
+
+  addStream(stream) {
+    this.peer.addStream(stream)
+  }
+
+  removeStream(stream) {
+    this.peer.removeStream(stream)
   }
 
   destroy() {

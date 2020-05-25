@@ -35,9 +35,11 @@ function Chat() {
     setTotalConnections(updatedStreams.length)
   }
 
-  const removeStream = (id) => {
-    logger.log('removeStream', id)
-    const updatedStreams = streams.filter((streamObj) => streamObj.id !== id)
+  const removeStream = ({ id, stream }) => {
+    logger.log('removeStream', id, streams)
+    const updatedStreams = streams.filter(
+      (streamObj) => streamObj.stream !== stream
+    )
     setStreams(updatedStreams)
     setTotalConnections(updatedStreams.length)
   }
@@ -62,7 +64,8 @@ function Chat() {
   const shareScreen = async () => {
     if (isScreenSharing) {
       setIsScreenSharing(false)
-      removeStream(localId)
+      removeStream({ id: localId, stream: screenSharingStream })
+      peerManager.removeStreamFromAll(screenSharingStream)
       screenSharingStream.getTracks().forEach((track) => track.stop())
       setScreenSharingStream(null)
       return
@@ -73,6 +76,7 @@ function Chat() {
     addStream({ id: localId, stream })
     setScreenSharingStream(stream)
     setIsScreenSharing(true)
+    peerManager.addStreamToAll(stream)
   }
 
   // Init peer manager, which will handle signaling and peer interaction.
@@ -102,8 +106,8 @@ function Chat() {
         />
       )}
       <RemoteStreamsContainer totalConnections={totalConnections}>
-        {streams.map(({ id, stream }) => (
-          <Video id={id} stream={stream} key={id} />
+        {streams.map(({ id, stream }, i) => (
+          <Video id={id} stream={stream} key={`${i}-${id}`} />
         ))}
       </RemoteStreamsContainer>
       <BottomLeftButtonContainer>
