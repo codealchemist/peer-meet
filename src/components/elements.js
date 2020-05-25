@@ -1,5 +1,6 @@
 import MicIcon from '@material-ui/icons/Mic'
 import MicOffIcon from '@material-ui/icons/MicOff'
+import PresentToAllIcon from '@material-ui/icons/PresentToAll'
 import styled from 'styled-components'
 
 export const RemoteStreamsContainer = styled.div`
@@ -117,13 +118,17 @@ export const BottomButtonContainer = styled.div`
   position: fixed;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-evenly;
   bottom: 10px;
-  width: 10vh;
+  width: 150px;
   height: 10vh;
   cursor: pointer;
   z-index: 20;
   color: #ddd;
+
+  svg {
+    padding: 20px;
+  }
 `
 
 export const BottomLeftButtonContainer = styled(BottomButtonContainer)`
@@ -140,4 +145,25 @@ export const StyledMicOn = styled(MicIcon)`
 
 export const StyledMicOff = styled(MicOffIcon)`
   color: white;
+`
+
+export const StyledScreenShareOff = styled(PresentToAllIcon)`
+  color: white;
+`
+
+export const StyledScreenShareOn = styled(PresentToAllIcon)`
+  color: red;
+`
+
+export const Pad = styled.div`
+  ${({ top, right, bottom, left, vertical, horizontal }) => {
+    let output = ''
+    if (top) output += `padding-top: ${top}px;`
+    if (right) output += `padding-right: ${right}px;`
+    if (bottom) output += `padding-bottom: ${bottom}px;`
+    if (left) output += `padding-left: ${left}px;`
+    if (vertical) output += `padding: ${vertical}px 0;`
+    if (horizontal) output += `padding: 0 ${horizontal}px;`
+    return output
+  }}
 `
