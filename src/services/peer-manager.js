@@ -19,6 +19,18 @@ class PeerManager {
   setStream(stream) {
     this.localStream = stream
   }
+
+  addStreamToAll(stream) {
+    Object.values(connections).map(({ peer }) => {
+      peer.addStream(stream)
+    })
+  }
+
+  removeStreamFromAll(stream) {
+    Object.values(connections).map(({ peer }) => {
+      peer.removeStream(stream)
+    })
+  }
 }
 const peerManager = new PeerManager()
 
@@ -31,7 +43,7 @@ if (initiatorId) {
 }
 
 const messageActionsMap = {
-  request: ({ remoteId, peer, signaling, isInitiator }) => {
+  request: ({ remoteId, peer, signaling }) => {
     logger.log(`Got request from ${remoteId}:`, { peer, signaling })
     logger.log(
       `Got request message from ${remoteId}. We will send signals to this peer when available.`
@@ -70,8 +82,13 @@ const signalActionMap = {
   },
   candidate: ({ id, remoteId, signal, peer, signaling }) => {
     logger.log('Got CANDIDATE signal, sending it...')
-    signaling.send({ id: localId, type: 'candidate', targetId: remoteId, signal })
-  },
+    signaling.send({
+      id: localId,
+      type: 'candidate',
+      targetId: remoteId,
+      signal
+    })
+  }
 }
 
 function createPeer({ remoteId, type }) {
@@ -80,7 +97,7 @@ function createPeer({ remoteId, type }) {
   const peer = new Peer({
     id: localId,
     isInitiator,
-    stream: peerManager.localStream,
+    stream: peerManager.localStream
   })
   peer
     .onSignal(({ signal, id }) => {
@@ -96,11 +113,16 @@ function createPeer({ remoteId, type }) {
     .onStream(({ stream, id }) => {
       logger.log(`Set STREAM from ${id} 🎬`)
       peerManager.addStream({ id: remoteId, peer, stream })
+
+      stream.onremovetrack = () => {
+        logger.log('---- TRACK REMOVED!')
+        peerManager.removeStream({ id: remoteId, stream })
+      }
     })
     .onClose(() => {
       logger.log(`CLOSED ${remoteId} `)
       delete connections[remoteId]
-      peerManager.removeStream(remoteId)
+      peerManager.removeStream({ id: remoteId })
     })
     .onError(({ id, error }) => {
       logger.log(`ERROR on ${remoteId} ❌`, error)
@@ -127,14 +149,14 @@ function getPeer({ remoteId, connections, type }) {
   // Create a new peer.
   const peer = createPeer({
     remoteId,
-    type,
+    type
   })
   logger.log('NEW PEER created', peer)
 
   connections[remoteId] = {
     id: remoteId,
     peer,
-    connected: false,
+    connected: false
   }
 
   return peer
@@ -162,7 +184,7 @@ signaling.onRemoteSignal(({ id, targetId, type, signal }) => {
   const peer = getPeer({
     remoteId: id,
     connections,
-    type,
+    type
   })
 
   if (typeof messageActionsMap[type] !== 'function') {
@@ -174,7 +196,7 @@ signaling.onRemoteSignal(({ id, targetId, type, signal }) => {
     remoteId: id,
     peer,
     signal,
-    signaling,
+    signaling
   })
 })
 
@@ -186,7 +208,7 @@ window.test = (msg) => {
     connection.peer.send({
       from: localId,
       to: id,
-      m: msg || `Hello ${id}! This is ${localId} :)`,
+      m: msg || `Hello ${id}! This is ${localId} :)`
     })
   })
 }
