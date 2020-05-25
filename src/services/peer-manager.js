@@ -23,6 +23,9 @@ class PeerManager {
 
   setStream(stream) {
     this.localStream = stream
+
+    // Update already stablished connections.
+    this.addStreamToAll(stream)
   }
 
   changeVideoStream({ videoTracks, newStream, oldStream }) {
@@ -85,7 +88,7 @@ const messageActionsMap = {
   },
   uuid: ({ remoteId, peer, signal, signaling }) => {
     // TODO
-  }
+  },
 }
 
 // Local signals.
@@ -105,9 +108,9 @@ const signalActionMap = {
       id: localId,
       type: 'candidate',
       targetId: remoteId,
-      signal
+      signal,
     })
-  }
+  },
 }
 
 function createPeer({ remoteId, type }) {
@@ -116,7 +119,7 @@ function createPeer({ remoteId, type }) {
   const peer = new Peer({
     id: localId,
     isInitiator,
-    stream: peerManager.localStream
+    stream: peerManager.localStream,
   })
   peer
     .onSignal(({ signal, id }) => {
@@ -130,7 +133,7 @@ function createPeer({ remoteId, type }) {
       signalActionMap[type]({ id, remoteId, signal, peer, signaling })
     })
     .onStream(({ stream, id }) => {
-      logger.log(`Set STREAM from ${id} 🎬`)
+      logger.log(`Set STREAM from ${remoteId} 🎬`)
       peerManager.addStream({ id: remoteId, peer, stream })
       connections[remoteId].stream = stream
 
@@ -175,14 +178,14 @@ function getPeer({ remoteId, connections, type }) {
   // Create a new peer.
   const peer = createPeer({
     remoteId,
-    type
+    type,
   })
   logger.log('NEW PEER created', peer)
 
   connections[remoteId] = {
     id: remoteId,
     peer,
-    connected: false
+    connected: false,
   }
 
   return peer
@@ -210,7 +213,7 @@ signaling.onRemoteSignal(({ id, targetId, type, signal }) => {
   const peer = getPeer({
     remoteId: id,
     connections,
-    type
+    type,
   })
 
   if (typeof messageActionsMap[type] !== 'function') {
@@ -222,7 +225,7 @@ signaling.onRemoteSignal(({ id, targetId, type, signal }) => {
     remoteId: id,
     peer,
     signal,
-    signaling
+    signaling,
   })
 })
 
@@ -234,7 +237,7 @@ window.test = (msg) => {
     connection.peer.send({
       from: localId,
       to: id,
-      m: msg || `Hello ${id}! This is ${localId} :)`
+      m: msg || `Hello ${id}! This is ${localId} :)`,
     })
   })
 }

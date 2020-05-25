@@ -121,7 +121,7 @@ export const BottomButtonContainer = styled.div`
   justify-content: space-evenly;
   bottom: 10px;
   width: 150px;
-  height: 10vh;
+  height: 60px;
   cursor: pointer;
   z-index: 20;
   color: #ddd;
@@ -136,7 +136,8 @@ export const BottomLeftButtonContainer = styled(BottomButtonContainer)`
 `
 
 export const BottomRightButtonContainer = styled(BottomButtonContainer)`
-  right: 10px;
+  justify-content: flex-end;
+  right: 30px;
 `
 
 export const StyledMicOn = styled(MicIcon)`

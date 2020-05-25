@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import peerManager, { localId } from 'services/peer-manager'
 import { Logger, getUserMedia, getMediaDevices } from 'helpers'
-import { startCapture } from 'services/screen-share'
+import { startCapture, isScreenCaptureSupported } from 'services/screen-share'
 import Video from './video'
 import {
   RemoteStreamsContainer,
@@ -13,7 +13,7 @@ import {
   StyledMicOn,
   StyledMicOff,
   StyledScreenShareOn,
-  StyledScreenShareOff
+  StyledScreenShareOff,
 } from './elements'
 
 const logger = new Logger('CHAT')
@@ -49,6 +49,7 @@ function Chat() {
 
   const mute = () => {
     setMuted(!muted)
+    if (!localAudio) return
     localAudio.enabled = muted
   }
 
@@ -72,16 +73,16 @@ function Chat() {
         localStream.addTrack(newVideoTrack)
         const videoTracks = {
           currentVideoTrack,
-          newVideoTrack
+          newVideoTrack,
         }
         peerManager.changeVideoStream({
           videoTracks,
           oldStream: localStream,
-          newStream: stream
+          newStream: stream,
         })
       },
       {
-        video: { deviceId: newDevice.deviceId }
+        video: { deviceId: newDevice.deviceId },
       }
     )
   }
@@ -117,6 +118,7 @@ function Chat() {
       setVideoDevices(devices.video)
       setTotalVideoDevices(devices.video.length)
     })
+
     getUserMedia((stream) => {
       logger.log('Got local stream 🎬', stream)
       setLocalAudio(stream.getAudioTracks()[0])
@@ -149,8 +151,12 @@ function Chat() {
         {muted && <StyledMicOff onClick={mute} />}
         {!muted && <StyledMicOn onClick={mute} />}
 
-        {isScreenSharing && <StyledScreenShareOn onClick={shareScreen} />}
-        {!isScreenSharing && <StyledScreenShareOff onClick={shareScreen} />}
+        {isScreenCaptureSupported && (
+          <>
+            {isScreenSharing && <StyledScreenShareOn onClick={shareScreen} />}
+            {!isScreenSharing && <StyledScreenShareOff onClick={shareScreen} />}
+          </>
+        )}
       </BottomLeftButtonContainer>
       <BottomRightButtonContainer>
         🔌 {totalConnections}

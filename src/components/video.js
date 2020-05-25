@@ -17,20 +17,33 @@ const VideoContainer = styled.div`
       return `
         width: 100vw;
         height: 100vh;
-        object-fit: cover;
-        z-index: 11;
+        background: black;
         position: absolute;
-        top: 0;
-        left: 0;
+        z-index: 20;
+
+        video {
+          width: 100vw !important;
+          height: 100vh !important;
+          object-fit: contain !important;
+          z-index: 11;
+          position: absolute;
+          top: 0;
+          left: 0;
+        }
       `
     }
 
     return `
-      width: 100%;
-      height: unset;
-      object-fit: unset;
       z-index: 10;
       position: relative;
+
+      video {
+        width: 100%;
+        height: unset;
+        object-fit: unset;
+        z-index: 10;
+        position: relative;
+      }
     `
   }}
 `

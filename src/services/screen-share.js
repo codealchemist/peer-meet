@@ -1,9 +1,9 @@
 export async function startCapture() {
   const displayMediaOptions = {
     video: {
-      cursor: 'always'
+      cursor: 'always',
     },
-    audio: false
+    audio: false,
   }
   let captureStream = null
 
@@ -16,3 +16,6 @@ export async function startCapture() {
   }
   return captureStream
 }
+
+export const isScreenCaptureSupported = () =>
+  !!navigator.mediaDevices.getDisplayMedia
