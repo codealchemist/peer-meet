@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import peerManager, { localId } from 'services/peer-manager'
+import { Logger, getUserMedia, getMediaDevices } from 'helpers'
 import { startCapture } from 'services/screen-share'
-import { Logger } from 'helpers'
 import Video from './video'
 import {
   RemoteStreamsContainer,
@@ -25,6 +25,9 @@ function Chat() {
   const [streams, setStreams] = useState([])
   const [localAudio, setLocalAudio] = useState()
   const [localStream, setLocalStream] = useState()
+  const [videoDevices, setVideoDevices] = useState()
+  const [totalVideoDevices, setTotalVideoDevices] = useState()
+  const [selectedVideoDeviceIndex, setSelectedVideoDeviceIndex] = useState(0)
   const [isScreenSharing, setIsScreenSharing] = useState(false)
   const [screenSharingStream, setScreenSharingStream] = useState()
 
@@ -49,16 +52,42 @@ function Chat() {
     localAudio.enabled = muted
   }
 
-  const getUserMedia = async (callback) => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
-      })
-      callback(stream)
-    } catch (err) {
-      logger.log('ERROR getting user media:', err)
-    }
+  const onLocalVideoClick = () => {
+    // Switch video source if more than one are available.
+    if (!videoDevices || totalVideoDevices < 2) return
+
+    let nextIndex = selectedVideoDeviceIndex + 1
+    if (nextIndex >= totalVideoDevices) nextIndex = 0 // Rotate.
+    setSelectedVideoDeviceIndex(nextIndex)
+    const newDevice = videoDevices[nextIndex]
+    if (!newDevice) return
+    logger.log('📹 Changed video source to:', newDevice)
+
+    // Get stream from selected device.
+    getUserMedia(
+      (stream) => {
+        const [currentVideoTrack] = localStream.getVideoTracks()
+        const [newVideoTrack] = stream.getVideoTracks()
+        localStream.removeTrack(currentVideoTrack)
+        localStream.addTrack(newVideoTrack)
+        const videoTracks = {
+          currentVideoTrack,
+          newVideoTrack
+        }
+        peerManager.changeVideoStream({
+          videoTracks,
+          oldStream: localStream,
+          newStream: stream
+        })
+      },
+      {
+        video: { deviceId: newDevice.deviceId }
+      }
+    )
+  }
+
+  const onTitleClick = () => {
+    setShowLocalVideo(!showLocalVideo)
   }
 
   const shareScreen = async () => {
@@ -83,24 +112,30 @@ function Chat() {
   peerManager.setHooks({ addStream, removeStream })
 
   useEffect(() => {
+    getMediaDevices((devices) => {
+      logger.log('Found MEDIA DEVICES 🎤📹', devices)
+      setVideoDevices(devices.video)
+      setTotalVideoDevices(devices.video.length)
+    })
     getUserMedia((stream) => {
       logger.log('Got local stream 🎬', stream)
       setLocalAudio(stream.getAudioTracks()[0])
       setLocalStream(stream)
       peerManager.setStream(stream)
+      setSelectedVideoDeviceIndex(0)
     })
   }, [])
 
   return (
     <>
-      <Title onClick={() => setShowLocalVideo(true)}>{localId}</Title>
+      <Title onClick={onTitleClick}>{localId}</Title>
       {showLocalVideo && (
         <LocalVideo
           ref={(video) => {
             if (!video || !localStream) return
             video.srcObject = localStream
           }}
-          onClick={() => setShowLocalVideo(false)}
+          onClick={onLocalVideoClick}
           autoPlay
           muted
         />

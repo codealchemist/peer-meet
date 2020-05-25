@@ -7,8 +7,13 @@ const logger = new Logger('PEER-MANAGER')
 const connections = {}
 export const localId = nanoid(12) // Our own id.
 const initiatorId = getRemoteId()
-const signaling = new Signaling(localId, initiatorId, 'wss:holis-turn.tk:3333')
+const signalingServer =
+  process.env.NODE_ENV === 'production'
+    ? 'wss:holis-turn.tk:3333'
+    : 'ws:localhost:3333'
+const signaling = new Signaling(localId, initiatorId, signalingServer)
 signaling.init(localId)
+logger.log('Signaling server:', signalingServer)
 
 class PeerManager {
   setHooks({ addStream, removeStream }) {
@@ -18,6 +23,20 @@ class PeerManager {
 
   setStream(stream) {
     this.localStream = stream
+  }
+
+  changeVideoStream({ videoTracks, newStream, oldStream }) {
+    if (!videoTracks || !oldStream) return
+    if (!connections || connections.length) return
+
+    const { currentVideoTrack, newVideoTrack } = videoTracks
+    this.setStream(newStream)
+    Object.entries(connections).map(([remoteId, { peer, stream }]) => {
+      if (!stream) return
+      const peerObj = peer.getPeerObject()
+      peerObj.replaceTrack(currentVideoTrack, newVideoTrack, oldStream)
+      logger.log('Replaced video stream.')
+    })
   }
 
   addStreamToAll(stream) {
@@ -113,12 +132,19 @@ function createPeer({ remoteId, type }) {
     .onStream(({ stream, id }) => {
       logger.log(`Set STREAM from ${id} 🎬`)
       peerManager.addStream({ id: remoteId, peer, stream })
+      connections[remoteId].stream = stream
 
       stream.onremovetrack = () => {
         logger.log('---- TRACK REMOVED!')
         peerManager.removeStream({ id: remoteId, stream })
       }
     })
+    // .onTrack(({ id, track, stream }) => {
+    //   if (!connections[remoteId]) return
+    //   logger.log('Got peer media track', track)
+    //   connections[remoteId].tracks = connections[remoteId].tracks || {}
+    //   connections[remoteId].tracks[track.kind] = { track, stream }
+    // })
     .onClose(() => {
       logger.log(`CLOSED ${remoteId} `)
       delete connections[remoteId]
