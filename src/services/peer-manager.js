@@ -38,6 +38,18 @@ class PeerManager {
       logger.log('Replaced video stream.')
     })
   }
+
+  addStreamToAll(stream) {
+    Object.values(connections).map(({ peer }) => {
+      peer.addStream(stream)
+    })
+  }
+
+  removeStreamFromAll(stream) {
+    Object.values(connections).map(({ peer }) => {
+      peer.removeStream(stream)
+    })
+  }
 }
 const peerManager = new PeerManager()
 
@@ -50,7 +62,7 @@ if (initiatorId) {
 }
 
 const messageActionsMap = {
-  request: ({ remoteId, peer, signaling, isInitiator }) => {
+  request: ({ remoteId, peer, signaling }) => {
     logger.log(`Got request from ${remoteId}:`, { peer, signaling })
     logger.log(
       `Got request message from ${remoteId}. We will send signals to this peer when available.`
@@ -121,6 +133,11 @@ function createPeer({ remoteId, type }) {
       logger.log(`Set STREAM from ${id} 🎬`)
       peerManager.addStream({ id: remoteId, peer, stream })
       connections[remoteId].stream = stream
+
+      stream.onremovetrack = () => {
+        logger.log('---- TRACK REMOVED!')
+        peerManager.removeStream({ id: remoteId, stream })
+      }
     })
     // .onTrack(({ id, track, stream }) => {
     //   if (!connections[remoteId]) return
@@ -131,7 +148,7 @@ function createPeer({ remoteId, type }) {
     .onClose(() => {
       logger.log(`CLOSED ${remoteId} `)
       delete connections[remoteId]
-      peerManager.removeStream(remoteId)
+      peerManager.removeStream({ id: remoteId })
     })
     .onError(({ id, error }) => {
       logger.log(`ERROR on ${remoteId} ❌`, error)

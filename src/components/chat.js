@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import peerManager, { localId } from 'services/peer-manager'
 import { Logger, getUserMedia, getMediaDevices } from 'helpers'
+import { startCapture } from 'services/screen-share'
 import Video from './video'
 import {
   RemoteStreamsContainer,
@@ -10,7 +11,9 @@ import {
   BottomLeftButtonContainer,
   BottomRightButtonContainer,
   StyledMicOn,
-  StyledMicOff
+  StyledMicOff,
+  StyledScreenShareOn,
+  StyledScreenShareOff
 } from './elements'
 
 const logger = new Logger('CHAT')
@@ -25,6 +28,8 @@ function Chat() {
   const [videoDevices, setVideoDevices] = useState()
   const [totalVideoDevices, setTotalVideoDevices] = useState()
   const [selectedVideoDeviceIndex, setSelectedVideoDeviceIndex] = useState(0)
+  const [isScreenSharing, setIsScreenSharing] = useState(false)
+  const [screenSharingStream, setScreenSharingStream] = useState()
 
   const addStream = ({ id, peer, stream }) => {
     logger.log(`addStream: GOT REMOTE STREAM 🎬 from ${id}`, peer)
@@ -33,9 +38,11 @@ function Chat() {
     setTotalConnections(updatedStreams.length)
   }
 
-  const removeStream = (id) => {
-    logger.log('removeStream', id)
-    const updatedStreams = streams.filter((streamObj) => streamObj.id !== id)
+  const removeStream = ({ id, stream }) => {
+    logger.log('removeStream', id, streams)
+    const updatedStreams = streams.filter(
+      (streamObj) => streamObj.stream !== stream
+    )
     setStreams(updatedStreams)
     setTotalConnections(updatedStreams.length)
   }
@@ -83,6 +90,24 @@ function Chat() {
     setShowLocalVideo(!showLocalVideo)
   }
 
+  const shareScreen = async () => {
+    if (isScreenSharing) {
+      setIsScreenSharing(false)
+      removeStream({ id: localId, stream: screenSharingStream })
+      peerManager.removeStreamFromAll(screenSharingStream)
+      screenSharingStream.getTracks().forEach((track) => track.stop())
+      setScreenSharingStream(null)
+      return
+    }
+
+    const stream = await startCapture()
+    if (!stream) return
+    addStream({ id: localId, stream })
+    setScreenSharingStream(stream)
+    setIsScreenSharing(true)
+    peerManager.addStreamToAll(stream)
+  }
+
   // Init peer manager, which will handle signaling and peer interaction.
   peerManager.setHooks({ addStream, removeStream })
 
@@ -116,13 +141,16 @@ function Chat() {
         />
       )}
       <RemoteStreamsContainer totalConnections={totalConnections}>
-        {streams.map(({ id, stream }) => (
-          <Video id={id} stream={stream} key={id} />
+        {streams.map(({ id, stream }, i) => (
+          <Video id={id} stream={stream} key={`${i}-${id}`} />
         ))}
       </RemoteStreamsContainer>
-      <BottomLeftButtonContainer onClick={mute}>
-        {muted && <StyledMicOff />}
-        {!muted && <StyledMicOn />}
+      <BottomLeftButtonContainer>
+        {muted && <StyledMicOff onClick={mute} />}
+        {!muted && <StyledMicOn onClick={mute} />}
+
+        {isScreenSharing && <StyledScreenShareOn onClick={shareScreen} />}
+        {!isScreenSharing && <StyledScreenShareOff onClick={shareScreen} />}
       </BottomLeftButtonContainer>
       <BottomRightButtonContainer>
         🔌 {totalConnections}

@@ -142,6 +142,14 @@ class Peer {
     this.peer.signal(remoteSignal)
   }
 
+  addStream(stream) {
+    this.peer.addStream(stream)
+  }
+
+  removeStream(stream) {
+    this.peer.removeStream(stream)
+  }
+
   destroy() {
     this.peer.destroy()
   }
