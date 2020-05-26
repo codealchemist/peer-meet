@@ -40,9 +40,10 @@ function Chat() {
 
   const removeStream = ({ id, stream }) => {
     logger.log('removeStream', id, streams)
-    const updatedStreams = streams.filter(
-      (streamObj) => streamObj.stream !== stream
-    )
+    const updatedStreams = streams.filter((streamObj) => {
+      if (!stream) return streamObj.id !== id
+      return streamObj.stream !== stream
+    })
     setStreams(updatedStreams)
     setTotalConnections(updatedStreams.length)
   }
