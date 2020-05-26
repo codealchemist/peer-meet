@@ -1,6 +1,7 @@
 import MicIcon from '@material-ui/icons/Mic'
 import MicOffIcon from '@material-ui/icons/MicOff'
 import PresentToAllIcon from '@material-ui/icons/PresentToAll'
+import AspectRatioIcon from '@material-ui/icons/AspectRatio'
 import styled from 'styled-components'
 
 export const RemoteStreamsContainer = styled.div`
@@ -12,9 +13,20 @@ export const RemoteStreamsContainer = styled.div`
   display: grid;
   video {
     width: 100vw;
-    height: 100vh;
-    object-fit: cover;
+    height: 100%;
+    object-fit: contain;
   }
+
+  ${({ isVideoMaximized }) => {
+    let output = ''
+    if (isVideoMaximized)
+      output += `
+      video {
+        object-fit: cover;
+      }
+    `
+    return output
+  }}
 
   ${({ totalConnections }) => {
     let video = ''
@@ -154,6 +166,14 @@ export const StyledScreenShareOff = styled(PresentToAllIcon)`
 `
 
 export const StyledScreenShareOn = styled(PresentToAllIcon)`
+  color: red;isVideoMaximized
+`
+
+export const StyledMaximizeVideoOff = styled(AspectRatioIcon)`
+  color: white;
+`
+
+export const StyledMaximizeVideoOn = styled(AspectRatioIcon)`
   color: red;
 `
 

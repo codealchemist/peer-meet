@@ -13,7 +13,9 @@ import {
   StyledMicOn,
   StyledMicOff,
   StyledScreenShareOn,
-  StyledScreenShareOff
+  StyledScreenShareOff,
+  StyledMaximizeVideoOn,
+  StyledMaximizeVideoOff
 } from './elements'
 
 const logger = new Logger('CHAT')
@@ -30,6 +32,7 @@ function Chat() {
   const [selectedVideoDeviceIndex, setSelectedVideoDeviceIndex] = useState(0)
   const [isScreenSharing, setIsScreenSharing] = useState(false)
   const [screenSharingStream, setScreenSharingStream] = useState()
+  const [isVideoMaximized, setIsVideoMaximized] = useState(false)
 
   const addStream = ({ id, peer, stream }) => {
     logger.log(`addStream: GOT REMOTE STREAM 🎬 from ${id}`, peer)
@@ -110,6 +113,10 @@ function Chat() {
     peerManager.addStreamToAll(stream)
   }
 
+  const onMaximizeVideoClick = () => {
+    setIsVideoMaximized(!isVideoMaximized)
+  }
+
   // Init peer manager, which will handle signaling and peer interaction.
   peerManager.setHooks({ addStream, removeStream })
 
@@ -143,7 +150,10 @@ function Chat() {
           muted
         />
       )}
-      <RemoteStreamsContainer totalConnections={totalConnections}>
+      <RemoteStreamsContainer
+        totalConnections={totalConnections}
+        isVideoMaximized={isVideoMaximized}
+      >
         {streams.map(({ id, stream }, i) => (
           <Video id={id} stream={stream} key={`${i}-${id}`} />
         ))}
@@ -157,6 +167,13 @@ function Chat() {
             {isScreenSharing && <StyledScreenShareOn onClick={shareScreen} />}
             {!isScreenSharing && <StyledScreenShareOff onClick={shareScreen} />}
           </>
+        )}
+
+        {isVideoMaximized && (
+          <StyledMaximizeVideoOn onClick={onMaximizeVideoClick} />
+        )}
+        {!isVideoMaximized && (
+          <StyledMaximizeVideoOff onClick={onMaximizeVideoClick} />
         )}
       </BottomLeftButtonContainer>
       <BottomRightButtonContainer>
