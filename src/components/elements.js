@@ -132,6 +132,7 @@ export const BottomButtonContainer = styled.div`
 `
 
 export const BottomLeftButtonContainer = styled(BottomButtonContainer)`
+  justify-content: flex-start;
   left: 10px;
 `
 

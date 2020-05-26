@@ -13,7 +13,7 @@ import {
   StyledMicOn,
   StyledMicOff,
   StyledScreenShareOn,
-  StyledScreenShareOff,
+  StyledScreenShareOff
 } from './elements'
 
 const logger = new Logger('CHAT')
@@ -73,16 +73,16 @@ function Chat() {
         localStream.addTrack(newVideoTrack)
         const videoTracks = {
           currentVideoTrack,
-          newVideoTrack,
+          newVideoTrack
         }
         peerManager.changeVideoStream({
           videoTracks,
           oldStream: localStream,
-          newStream: stream,
+          newStream: stream
         })
       },
       {
-        video: { deviceId: newDevice.deviceId },
+        video: { deviceId: newDevice.deviceId }
       }
     )
   }
@@ -151,7 +151,7 @@ function Chat() {
         {muted && <StyledMicOff onClick={mute} />}
         {!muted && <StyledMicOn onClick={mute} />}
 
-        {isScreenCaptureSupported && (
+        {isScreenCaptureSupported() && (
           <>
             {isScreenSharing && <StyledScreenShareOn onClick={shareScreen} />}
             {!isScreenSharing && <StyledScreenShareOff onClick={shareScreen} />}
