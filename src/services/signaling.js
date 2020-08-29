@@ -1,7 +1,11 @@
+import { Logger } from 'helpers'
+
+const logger = new Logger('[ SIGNALLING ]')
+
 class Signaling {
   constructor(id, remoteId, serverUrl) {
     if (!serverUrl) {
-      console.error('SIGNALING ERROR: serverUrl is required!')
+      logger.log('ERROR: serverUrl is required!')
     }
 
     this.id = id
@@ -11,6 +15,7 @@ class Signaling {
     this.onErrorCallback = null
     this.isConnected = false
     this.serverUrl = serverUrl
+    this.keepAliveSeconds = 10
 
     // Set sharing URL only when not connecting to an initiator.
     // The initiator creates sharing.
@@ -20,42 +25,75 @@ class Signaling {
 
   setSharingUrl() {
     this.shareUrl = `${this.baseUrl}/${this.id}`
-    console.log('CHANNEL: setSharingUrl', this.shareUrl)
+    logger.log('CHANNEL: setSharingUrl', this.shareUrl)
     window.history.replaceState(null, document.title, this.shareUrl)
     return this
   }
 
-  init() {
-    console.log('PEER ID', this.id)
-    console.log('INITIATOR ID:', this.initiatorId || `${this.id} (me)`)
-    this.channelId = this.initiatorId || this.id
-    console.log('CHANNEL', this.channelId)
+  connect() {
     this.socket = new WebSocket(`${this.serverUrl}/${this.channelId}`)
+    return this
+  }
+
+  setEvents() {
     this.socket.onopen = () => {
       this.isConnected = true
-      console.log('SOCKET CONNECTED')
+      logger.log('SOCKET CONNECTED')
     }
-    this.socket.onmessage = message => this.onMessage(message)
+    this.socket.onmessage = (message) => {
+      if (message.data === 'ping') return
+      this.onMessage(message)
+    }
     this.socket.onclose = (event) => {
       this.isConnected = false
       if (event.wasClean) {
-        console.log(`WebSocket connection closed cleanly, code=${event.code} reason=${event.reason}`)
+        logger.log(
+          `WebSocket connection closed cleanly, code=${event.code} reason=${event.reason}`
+        )
+        this.isConnected = false
+        this.reconnect()
       } else {
         // e.g. server process killed or network down
         // event.code is usually 1006 in this case
-        console.log('WebSocket connection died')
+        logger.log('WebSocket connection died')
+        this.isConnected = false
+        this.reconnect()
       }
     }
     this.socket.onerror = (error) => {
-      console.log('WebSocket connection error:', error.message)
+      logger.log('WebSocket connection error:', error.message)
     }
 
     return this
   }
 
+  init() {
+    logger.log('PEER ID', this.id)
+    logger.log('INITIATOR ID:', this.initiatorId || `${this.id} (me)`)
+    this.channelId = this.initiatorId || this.id
+    logger.log('CHANNEL', this.channelId)
+    this.connect().setEvents().keepAlive()
+
+    return this
+  }
+
+  reconnect() {
+    logger.log('Reconnecting...')
+    this.connect().setEvents()
+  }
+
+  keepAlive() {
+    setInterval(() => {
+      if (!this.isConnected) return
+
+      logger.log('🏓')
+      this.socket.send('ping')
+    }, 1000 * this.keepAliveSeconds)
+  }
+
   onMessage({ data }) {
     const message = JSON.parse(data)
-    console.log('new message received', message)
+    logger.log('new message received', message)
 
     if (typeof this.onRemoteSignalCallback === 'function') {
       this.onRemoteSignalCallback(message)
@@ -66,7 +104,7 @@ class Signaling {
   send(message) {
     // Wait for connection.
     if (!this.isConnected) {
-      console.log('Wait for socket connection...')
+      logger.log('Wait for socket connection...')
       setTimeout(() => this.send(message), 250)
       return
     }
