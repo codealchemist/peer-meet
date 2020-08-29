@@ -88,7 +88,7 @@ const messageActionsMap = {
   },
   uuid: ({ remoteId, peer, signal, signaling }) => {
     // TODO
-  },
+  }
 }
 
 // Local signals.
@@ -108,9 +108,9 @@ const signalActionMap = {
       id: localId,
       type: 'candidate',
       targetId: remoteId,
-      signal,
+      signal
     })
-  },
+  }
 }
 
 function createPeer({ remoteId, type }) {
@@ -119,7 +119,7 @@ function createPeer({ remoteId, type }) {
   const peer = new Peer({
     id: localId,
     isInitiator,
-    stream: peerManager.localStream,
+    stream: peerManager.localStream
   })
   peer
     .onSignal(({ signal, id }) => {
@@ -178,14 +178,14 @@ function getPeer({ remoteId, connections, type }) {
   // Create a new peer.
   const peer = createPeer({
     remoteId,
-    type,
+    type
   })
   logger.log('NEW PEER created', peer)
 
   connections[remoteId] = {
     id: remoteId,
     peer,
-    connected: false,
+    connected: false
   }
 
   return peer
@@ -213,8 +213,12 @@ signaling.onRemoteSignal(({ id, targetId, type, signal }) => {
   const peer = getPeer({
     remoteId: id,
     connections,
-    type,
+    type
   })
+
+  // TODO: ignore on server, avoid broadcast!
+  // Ignore ping messages.
+  if (type === 'ping') return
 
   if (typeof messageActionsMap[type] !== 'function') {
     logger.log(`No handler for "${type}" message type.`)
@@ -225,7 +229,7 @@ signaling.onRemoteSignal(({ id, targetId, type, signal }) => {
     remoteId: id,
     peer,
     signal,
-    signaling,
+    signaling
   })
 })
 
@@ -237,7 +241,7 @@ window.test = (msg) => {
     connection.peer.send({
       from: localId,
       to: id,
-      m: msg || `Hello ${id}! This is ${localId} :)`,
+      m: msg || `Hello ${id}! This is ${localId} :)`
     })
   })
 }
