@@ -1,6 +1,6 @@
 {
   "name": "peer-meet",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^4.2.4",
@@ -15,6 +15,7 @@
   "scripts": {
     "start": "craco start",
     "build": "craco build; cp _redirects build/",
+    "prebuild": "cd netlify/functions/ably-token-request && npm i",
     "test": "craco test",
     "eject": "react-scripts eject"
   },
@@ -34,6 +35,7 @@
     ]
   },
   "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@craco/craco": "^7.1.0",
     "@material-ui/core": "^4.9.10",
     "@material-ui/icons": "^4.9.1",
