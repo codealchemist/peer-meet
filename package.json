@@ -6,14 +6,16 @@
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
+    "ably": "^1.2.48",
+    "process": "^0.11.10",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
-    "react-scripts": "3.4.1"
+    "react-scripts": "^5.0.1"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build; cp _redirects build/",
-    "test": "react-scripts test",
+    "start": "craco start",
+    "build": "craco build; cp _redirects build/",
+    "test": "craco test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -32,9 +34,11 @@
     ]
   },
   "devDependencies": {
+    "@craco/craco": "^7.1.0",
     "@material-ui/core": "^4.9.10",
     "@material-ui/icons": "^4.9.1",
     "@vardius/react-user-media": "^1.0.1",
+    "buffer": "^6.0.3",
     "nanoid": "^3.1.3",
     "reactn": "^2.2.7",
     "simple-peer": "^9.6.2",

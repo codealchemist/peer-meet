@@ -1,5 +1,10 @@
+import * as process from 'process'
 import SimplePeer from 'simple-peer'
 window.SimplePeer = SimplePeer
+
+window.global = window
+window.process = process
+window.Buffer = []
 
 class Peer {
   constructor({ isInitiator = false, id, stream, config } = {}) {
@@ -9,7 +14,7 @@ class Peer {
     this.config = config || {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:global.stun.twilio.com:3478?transport=udp' },
+        // { urls: 'stun:global.stun.twilio.com:3478?transport=udp' },
         { urls: 'stun:stun.speedy.com.ar:3478' },
         {
           urls: 'turn:holis-turn.tk:3478',

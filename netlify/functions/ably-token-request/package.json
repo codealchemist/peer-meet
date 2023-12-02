@@ -1,0 +1,21 @@
+{
+  "name": "ably-token-request",
+  "version": "1.0.0",
+  "description": "ably token request",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Netlify",
+    "Serverless"
+  ],
+  "author": "Alberto Miranda",
+  "license": "MIT",
+  "dependencies": {
+    "@netlify/functions": "^2.3.0",
+    "ably": "^1.2.47",
+    "dotenv": "^16.3.1"
+  }
+}
