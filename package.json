@@ -15,6 +15,7 @@
   "scripts": {
     "start": "craco start",
     "build": "craco build; cp _redirects build/",
+    "prebuild": "cd netlify/functions/ably-token-request && npm i",
     "test": "craco test",
     "eject": "react-scripts eject"
   },
