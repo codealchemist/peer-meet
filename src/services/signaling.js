@@ -7,7 +7,7 @@ const baseUrl = window.location.origin
 class Signaling {
   constructor(id, remoteId) {
     this.client = new Realtime({
-      authUrl: `${baseUrl}/.netlify/functions/ably-token-request?clientId={id}`,
+      authUrl: `${baseUrl}/.netlify/functions/ably-token-request?clientId=${id}`,
       echoMessages: false
     })
 
