@@ -7,13 +7,8 @@ const logger = new Logger('PEER-MANAGER')
 const connections = {}
 export const localId = nanoid(12) // Our own id.
 const initiatorId = getRemoteId()
-const signalingServer =
-  process.env.NODE_ENV === 'production'
-    ? 'wss:holis-turn.tk:3333'
-    : 'ws:localhost:3333'
-const signaling = new Signaling(localId, initiatorId, signalingServer)
+const signaling = new Signaling(localId, initiatorId)
 signaling.init(localId)
-logger.log('Signaling server:', signalingServer)
 
 class PeerManager {
   setHooks({ addStream, removeStream }) {

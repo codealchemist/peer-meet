@@ -1,12 +1,15 @@
+import { Realtime } from 'ably'
 import { Logger } from 'helpers'
 
 const logger = new Logger('[ SIGNALLING ]')
+const baseUrl = window.location.origin
 
 class Signaling {
-  constructor(id, remoteId, serverUrl) {
-    if (!serverUrl) {
-      logger.log('ERROR: serverUrl is required!')
-    }
+  constructor(id, remoteId) {
+    this.client = new Realtime({
+      authUrl: `${baseUrl}/.netlify/functions/ably-token-request?clientId={id}`,
+      echoMessages: false
+    })
 
     this.id = id
     this.initiatorId = remoteId
@@ -14,7 +17,6 @@ class Signaling {
     this.baseUrl = `${window.location.protocol}//${window.location.host}`
     this.onErrorCallback = null
     this.isConnected = false
-    this.serverUrl = serverUrl
     this.keepAliveSeconds = 10
 
     // Set sharing URL only when not connecting to an initiator.
@@ -31,38 +33,53 @@ class Signaling {
   }
 
   connect() {
-    this.socket = new WebSocket(`${this.serverUrl}/${this.channelId}`)
+    // this.socket = new WebSocket(`${this.serverUrl}/${this.channelId}`)
+    this.channel = this.client.channels.get(this.channelId)
     return this
   }
 
   setEvents() {
-    this.socket.onopen = () => {
+    this.client.connection.on('connected', () => {
+      logger.log('Connected to ably!')
       this.isConnected = true
-      logger.log('SOCKET CONNECTED')
-    }
-    this.socket.onmessage = (message) => {
-      if (message.data === 'ping') return
-      this.onMessage(message)
-    }
-    this.socket.onclose = (event) => {
-      this.isConnected = false
-      if (event.wasClean) {
-        logger.log(
-          `WebSocket connection closed cleanly, code=${event.code} reason=${event.reason}`
-        )
-        this.isConnected = false
-        this.reconnect()
-      } else {
-        // e.g. server process killed or network down
-        // event.code is usually 1006 in this case
-        logger.log('WebSocket connection died')
-        this.isConnected = false
-        this.reconnect()
-      }
-    }
-    this.socket.onerror = (error) => {
-      logger.log('WebSocket connection error:', error.message)
-    }
+    })
+
+    this.client.connection.on('failed', () => {
+      logger.log('Connection to ably failed')
+    })
+
+    this.channel.subscribe('message', (raw) => {
+      const { data } = raw
+      this.onMessage(data)
+    })
+
+    // this.socket.onopen = () => {
+    //   this.isConnected = true
+    //   logger.log('SOCKET CONNECTED')
+    // }
+    // this.socket.onmessage = (message) => {
+    //   if (message.data === 'ping') return
+    //   this.onMessage(message)
+    // }
+    // this.socket.onclose = (event) => {
+    //   this.isConnected = false
+    //   if (event.wasClean) {
+    //     logger.log(
+    //       `WebSocket connection closed cleanly, code=${event.code} reason=${event.reason}`
+    //     )
+    //     this.isConnected = false
+    //     this.reconnect()
+    //   } else {
+    //     // e.g. server process killed or network down
+    //     // event.code is usually 1006 in this case
+    //     logger.log('WebSocket connection died')
+    //     this.isConnected = false
+    //     this.reconnect()
+    //   }
+    // }
+    // this.socket.onerror = (error) => {
+    //   logger.log('WebSocket connection error:', error.message)
+    // }
 
     return this
   }
@@ -72,7 +89,7 @@ class Signaling {
     logger.log('INITIATOR ID:', this.initiatorId || `${this.id} (me)`)
     this.channelId = this.initiatorId || this.id
     logger.log('CHANNEL', this.channelId)
-    this.connect().setEvents().keepAlive()
+    this.connect().setEvents()
 
     return this
   }
@@ -82,17 +99,16 @@ class Signaling {
     this.connect().setEvents()
   }
 
-  keepAlive() {
-    setInterval(() => {
-      if (!this.isConnected) return
+  // keepAlive() {
+  //   setInterval(() => {
+  //     if (!this.isConnected) return
 
-      logger.log('🏓')
-      this.socket.send('ping')
-    }, 1000 * this.keepAliveSeconds)
-  }
+  //     logger.log('🏓')
+  //     this.socket.send('ping')
+  //   }, 1000 * this.keepAliveSeconds)
+  // }
 
-  onMessage({ data }) {
-    const message = JSON.parse(data)
+  onMessage(message) {
     logger.log('new message received', message)
 
     if (typeof this.onRemoteSignalCallback === 'function') {
@@ -109,8 +125,10 @@ class Signaling {
       return
     }
 
-    const data = JSON.stringify(message)
-    this.socket.send(data)
+    this.channel.publish('message', message)
+
+    // const data = JSON.stringify(message)
+    // this.socket.send(data)
     return this
   }
 
